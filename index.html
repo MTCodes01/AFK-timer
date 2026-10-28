@@ -18,6 +18,23 @@
     <canvas id="confetti-canvas"></canvas>
   </div>
 
+  <div class="cat-widget">
+    <section id="cat-companion" class="cat-companion" data-mood="idle" aria-label="Cat companion">
+      <div class="cat-character" aria-hidden="true">
+        <span class="cat-ear cat-ear-left"></span>
+        <span class="cat-ear cat-ear-right"></span>
+        <span class="cat-eye cat-eye-left"></span>
+        <span class="cat-eye cat-eye-right"></span>
+        <span class="cat-nose"></span>
+        <span class="cat-mouth"></span>
+        <span class="cat-whiskers cat-whiskers-left"></span>
+        <span class="cat-whiskers cat-whiskers-right"></span>
+      </div>
+      <p id="cat-message" class="cat-message" aria-live="polite">I'm keeping an eye on your stillness.</p>
+    </section>
+    <button id="cat-toggle" class="cat-toggle" type="button" aria-controls="cat-companion" aria-pressed="false">Hide cat</button>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="script.js"></script>
 </body>
