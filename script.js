@@ -2,6 +2,13 @@ let timerDisplay = document.getElementById("timer");
 let statusDisplay = document.getElementById("status");
 let messageDisplay = document.getElementById("message");
 let zenDisplay = document.getElementById("zen-counter");
+let themeToggle = document.getElementById("theme-toggle");
+
+themeToggle.addEventListener("click", () => {
+  const isLightTheme = document.body.classList.toggle("light-theme");
+  themeToggle.textContent = isLightTheme ? "🌙 Dark mode" : "☀ Light mode";
+  themeToggle.setAttribute("aria-pressed", String(isLightTheme));
+});
 
 let minutes = 0, seconds = 0;
 let isIdle = true;
