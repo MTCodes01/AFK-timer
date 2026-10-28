@@ -3,6 +3,76 @@ let statusDisplay = document.getElementById("status");
 let messageDisplay = document.getElementById("message");
 let zenDisplay = document.getElementById("zen-counter");
 let themeToggle = document.getElementById("theme-toggle");
+let catCompanion = document.getElementById("cat-companion");
+let catMessage = document.getElementById("cat-message");
+let catToggle = document.getElementById("cat-toggle");
+
+const catState = {
+  mood: "idle",
+  lastActivityAt: 0
+};
+let catCelebrationTimeout;
+
+const catActivityMessages = [
+  "We agreed to do absolutely nothing!",
+  "Seriously? Again?",
+  "I was just getting comfortable.",
+  "Your hands are making suspicious noises.",
+  "There goes my very important nap."
+];
+
+function setCatMood(mood, message) {
+  catState.mood = mood;
+  catCompanion.dataset.mood = mood;
+  if (message) {
+    catMessage.textContent = message;
+  }
+}
+
+function updateCatForStillness() {
+  if (!isIdle || catState.mood === "celebrating") {
+    return;
+  }
+
+  if (afkTime >= 90) {
+    setCatMood("sleeping", "Finally, some peace and quiet. Zzz...");
+  } else {
+    catCompanion.dataset.resting = String(afkTime >= 30);
+    setCatMood("idle", afkTime >= 30 ? "Okay, this is actually quite nice..." : "I'm keeping an eye on your stillness.");
+  }
+}
+
+function reactToCatActivity(streakWasActive) {
+  clearTimeout(catCelebrationTimeout);
+  const now = Date.now();
+  const repeatedActivity = now - catState.lastActivityAt < 1500;
+  catState.lastActivityAt = now;
+
+  if (streakWasActive) {
+    catCompanion.dataset.resting = "false";
+    setCatMood("annoyed", catActivityMessages[Math.floor(Math.random() * catActivityMessages.length)]);
+  } else if (repeatedActivity) {
+    setCatMood("annoyed", "Could you not? I was almost asleep.");
+  } else {
+    setCatMood("suspicious", "I saw that. What are you up to?");
+  }
+}
+
+function celebrateCat(message) {
+  clearTimeout(catCelebrationTimeout);
+  setCatMood("celebrating", message);
+  catCelebrationTimeout = setTimeout(() => {
+    catState.mood = "";
+    updateCatForStillness();
+  }, 1800);
+}
+
+catToggle.addEventListener("click", () => {
+  const isHidden = !catCompanion.hidden;
+  catCompanion.hidden = isHidden;
+  catToggle.textContent = isHidden ? "Show cat" : "Hide cat";
+  catToggle.setAttribute("aria-pressed", String(isHidden));
+});
 
 themeToggle.addEventListener("click", () => {
   const isLightTheme = document.body.classList.toggle("light-theme");
@@ -54,6 +124,7 @@ function updateTimer() {
   if (isIdle) {
     seconds++;
     afkTime++;
+    updateCatForStillness();
     
     // Zen points every 30 seconds
     if (afkTime % 30 === 0) {
@@ -88,6 +159,7 @@ function updateTimer() {
       currentMessage = "🎉 2 MINUTES OF PURE NOTHINGNESS! LEGENDARY!";
       messageDisplay.textContent = currentMessage;
       messageDisplay.style.color = '#ff6b6b';
+      celebrateCat("Two whole minutes? I’m impressed. A little.");
     }
 
     if (afkTime === 300) { // 5 minutes
@@ -100,6 +172,7 @@ function updateTimer() {
       currentMessage = "🏆 5 MINUTES! PROFESSIONAL STATUE STATUS ACHIEVED!";
       messageDisplay.textContent = currentMessage;
       messageDisplay.style.color = '#ffd700';
+      celebrateCat("Five minutes of stillness! I knew you had it in you.");
     }
 
     if (afkTime === 600) { // 10 minutes
@@ -113,6 +186,7 @@ function updateTimer() {
       messageDisplay.textContent = currentMessage;
       messageDisplay.style.color = '#ffd700';
       messageDisplay.style.textShadow = '0 0 20px #ffd700';
+      celebrateCat("Ten minutes! You may continue your very serious nap.");
     }
   }
 }
@@ -148,37 +222,26 @@ function resetIdleTimer() {
 let isResetting = false;
 
 function handleUserActivity() {
+  reactToCatActivity(isIdle);
+
   if (!isResetting) {
-  isResetting = true;
-  resetIdleTimer();
-  
-  // Clear any existing timeout
-  clearTimeout(timeout);
-  
-  // Set a new timeout that will only trigger if no more activity occurs
-  timeout = setTimeout(() => {
-    isIdle = true;
-    isResetting = false;
-    statusDisplay.innerHTML = 'Status: <span style="color:green;">Idle</span>';
-    messageDisplay.textContent = "✨ Welcome back to the art of doing nothing!";
-    messageDisplay.style.color = '#66bb6a';
-    hasShownMessage = false;
-  }, 500);
-  } else {
-  // User is still moving, reset the timeout
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    isIdle = true;
-    isResetting = false;
-    statusDisplay.innerHTML = 'Status: <span style="color:green;">Idle</span>';
-    messageDisplay.textContent = "✨ Welcome back to the art of doing nothing!";
-    messageDisplay.style.color = '#66bb6a';
-    hasShownMessage = false;
-  }, 500);
+    isResetting = true;
+    resetIdleTimer();
   }
+
+  clearTimeout(timeout);
+  timeout = setTimeout(() => {
+    isIdle = true;
+    isResetting = false;
+    statusDisplay.innerHTML = 'Status: <span style="color:green;">Idle</span>';
+    messageDisplay.textContent = "✨ Welcome back to the art of doing nothing!";
+    messageDisplay.style.color = '#66bb6a';
+    hasShownMessage = false;
+    updateCatForStillness();
+  }, 500);
 }
 
-['mousemove', 'keydown', 'scroll', 'touchstart'].forEach(event =>
+['mousemove', 'click', 'keydown', 'scroll', 'touchstart'].forEach(event =>
   document.addEventListener(event, handleUserActivity)
 );
 

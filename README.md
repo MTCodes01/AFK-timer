@@ -12,6 +12,7 @@ Our revolutionary AFK Timer tracks your motionlessness with precision, awards ze
 - 🎯 **Precision Stillness Tracking**: Detects even the slightest mouse twitch, keystroke, or scroll.
 - 🧘 **Zen Point System**: Gamifies your commitment to inactivity. Earn points every 30 seconds.
 - 🎉 **Milestone Celebrations**: Epic confetti for achieving new levels of nothingness (at 2, 5, and 10 minutes).
+- 🐱 **Cat Companion**: Reacts to page activity, relaxes as you stay still, celebrates milestones, and can be hidden.
 - 💭 **Philosophical Insights**: Deep thoughts and praise messages about the art of doing nothing.
 - ✨ **Glassmorphism UI**: Premium design for premium procrastination.
 - 😤 **Shame System**: Disappointed messages when you dare to move and break your streak.
@@ -31,3 +32,5 @@ cd Team-Five-CEAL
 ```
 
 Simply open `index.html` in your favorite browser, let go of the mouse and keyboard, and begin your journey into the void of productivity!
+
+The cat companion responds to mouse movement, clicks, scrolling, touch, and keyboard input on the page. It never captures input, and its animations respect your system's reduced-motion preference. Use the **Hide cat** button to dismiss it.
