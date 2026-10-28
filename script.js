@@ -124,7 +124,8 @@ function resetIdleTimer() {
   messageDisplay.style.color = '#ff6b6b';
   messageDisplay.style.textShadow = 'none';
   
-  afkTime = 0;
+  afkTime = minutes = seconds = 0;
+  timerDisplay.textContent = '00:00';
   hasShownMessage = false; // Reset flag so new message can show when idle starts
 
   clearTimeout(timeout);
