@@ -1,251 +1,167 @@
-let timerDisplay = document.getElementById("timer");
-let statusDisplay = document.getElementById("status");
-let messageDisplay = document.getElementById("message");
-let zenDisplay = document.getElementById("zen-counter");
-let themeToggle = document.getElementById("theme-toggle");
-let catCompanion = document.getElementById("cat-companion");
-let catMessage = document.getElementById("cat-message");
-let catToggle = document.getElementById("cat-toggle");
+const WORK_DURATION_SECONDS = 60 * 60;
+const BREAK_DURATION_SECONDS = 10 * 60;
 
-const catState = {
-  mood: "idle",
-  lastActivityAt: 0
-};
-let catCelebrationTimeout;
+const timerDisplay = document.getElementById("timer");
+const phaseLabel = document.getElementById("phase-label");
+const statusDisplay = document.getElementById("status");
+const progressDisplay = document.getElementById("progress");
+const messageDisplay = document.getElementById("message");
+const errorDisplay = document.getElementById("error-message");
+const primaryControl = document.getElementById("primary-control");
+const skipControl = document.getElementById("skip-control");
+const themeToggle = document.getElementById("theme-toggle");
 
-const catActivityMessages = [
-  "We agreed to do absolutely nothing!",
-  "Seriously? Again?",
-  "I was just getting comfortable.",
-  "Your hands are making suspicious noises.",
-  "There goes my very important nap."
-];
+let timerState = null;
+let requestPending = false;
+let refreshPending = false;
 
-function setCatMood(mood, message) {
-  catState.mood = mood;
-  catCompanion.dataset.mood = mood;
-  if (message) {
-    catMessage.textContent = message;
-  }
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-function updateCatForStillness() {
-  if (!isIdle || catState.mood === "celebrating") {
+function getRemainingSeconds() {
+  if (!timerState) {
+    return WORK_DURATION_SECONDS;
+  }
+  if (timerState.status === "running") {
+    return Math.max(0, Math.ceil((timerState.endAt - Date.now()) / 1000));
+  }
+  return Math.max(0, Math.ceil((timerState.remainingMs || 0) / 1000));
+}
+
+function render() {
+  if (!timerState) {
     return;
   }
 
-  if (afkTime >= 90) {
-    setCatMood("sleeping", "Finally, some peace and quiet. Zzz...");
+  const isWork = timerState.phase === "work";
+  const isBreak = timerState.phase === "break";
+  const totalSeconds = isBreak ? BREAK_DURATION_SECONDS : WORK_DURATION_SECONDS;
+  const remainingSeconds = timerState.status === "idle"
+    ? WORK_DURATION_SECONDS
+    : getRemainingSeconds();
+  const elapsedPercent = ((totalSeconds - remainingSeconds) / totalSeconds) * 100;
+
+  timerDisplay.textContent = formatTime(remainingSeconds);
+  timerDisplay.setAttribute("aria-label", `${remainingSeconds} seconds remaining`);
+  phaseLabel.textContent = isWork
+    ? "Focus session"
+    : isBreak
+      ? "Break time"
+      : "Ready to focus";
+  statusDisplay.textContent = timerState.status === "paused"
+    ? "Paused"
+    : timerState.status === "running"
+      ? (isBreak ? "Take a moment to recharge" : "One thing at a time")
+      : "60 min focus · 10 min break";
+  progressDisplay.style.width = `${Math.min(100, Math.max(0, elapsedPercent))}%`;
+  progressDisplay.dataset.phase = isBreak ? "break" : "work";
+  primaryControl.textContent = timerState.status === "idle"
+    ? "Start focus"
+    : timerState.status === "paused"
+      ? "Resume"
+      : "Pause";
+  skipControl.disabled = timerState.status === "idle" || requestPending;
+  primaryControl.disabled = requestPending;
+
+  if (timerState.status === "idle") {
+    messageDisplay.textContent = "Make space for focused work.";
+  } else if (timerState.status === "paused") {
+    messageDisplay.textContent = "Your timer is paused. Resume when you’re ready.";
+  } else if (isBreak) {
+    messageDisplay.textContent = "Step away from your screen and recharge.";
   } else {
-    catCompanion.dataset.resting = String(afkTime >= 30);
-    setCatMood("idle", afkTime >= 30 ? "Okay, this is actually quite nice..." : "I'm keeping an eye on your stillness.");
+    messageDisplay.textContent = "Stay focused. Your break is coming.";
   }
 }
 
-function reactToCatActivity(streakWasActive) {
-  clearTimeout(catCelebrationTimeout);
-  const now = Date.now();
-  const repeatedActivity = now - catState.lastActivityAt < 1500;
-  catState.lastActivityAt = now;
+function request(command) {
+  requestPending = true;
+  errorDisplay.hidden = true;
+  render();
 
-  if (streakWasActive) {
-    catCompanion.dataset.resting = "false";
-    setCatMood("annoyed", catActivityMessages[Math.floor(Math.random() * catActivityMessages.length)]);
-  } else if (repeatedActivity) {
-    setCatMood("annoyed", "Could you not? I was almost asleep.");
-  } else {
-    setCatMood("suspicious", "I saw that. What are you up to?");
+  chrome.runtime.sendMessage({ type: command }, (response) => {
+    requestPending = false;
+    if (chrome.runtime.lastError) {
+      errorDisplay.textContent = "Could not reach the timer. Reopen the extension and try again.";
+      errorDisplay.hidden = false;
+      render();
+      return;
+    }
+    if (response?.error) {
+      errorDisplay.textContent = response.error;
+      errorDisplay.hidden = false;
+      render();
+      return;
+    }
+    timerState = response.state;
+    render();
+  });
+}
+
+function refreshTimerState() {
+  if (refreshPending) {
+    return;
   }
+  refreshPending = true;
+  chrome.runtime.sendMessage({ type: "getState" }, (response) => {
+    refreshPending = false;
+    if (!chrome.runtime.lastError && response?.state) {
+      timerState = response.state;
+      render();
+    }
+  });
 }
 
-function celebrateCat(message) {
-  clearTimeout(catCelebrationTimeout);
-  setCatMood("celebrating", message);
-  catCelebrationTimeout = setTimeout(() => {
-    catState.mood = "";
-    updateCatForStillness();
-  }, 1800);
-}
-
-catToggle.addEventListener("click", () => {
-  const isHidden = !catCompanion.hidden;
-  catCompanion.hidden = isHidden;
-  catToggle.textContent = isHidden ? "Show cat" : "Hide cat";
-  catToggle.setAttribute("aria-pressed", String(isHidden));
+primaryControl.addEventListener("click", () => {
+  if (!timerState) {
+    return;
+  }
+  const command = timerState.status === "idle"
+    ? "start"
+    : timerState.status === "paused"
+      ? "resume"
+      : "pause";
+  request(command);
 });
+
+skipControl.addEventListener("click", () => request("skip"));
 
 themeToggle.addEventListener("click", () => {
   const isLightTheme = document.body.classList.toggle("light-theme");
-  themeToggle.textContent = isLightTheme ? "🌙 Dark mode" : "☀ Light mode";
+  themeToggle.textContent = isLightTheme ? "☾" : "☀";
   themeToggle.setAttribute("aria-pressed", String(isLightTheme));
+  themeToggle.setAttribute("aria-label", isLightTheme ? "Switch to dark mode" : "Switch to light mode");
+  localStorage.setItem("lightTheme", String(isLightTheme));
 });
 
-let minutes = 0, seconds = 0;
-let isIdle = true;
-let afkTime = 0;
-let zenPoints = 0;
-let currentMessage = "";
-let hasShownMessage = false;
+if (localStorage.getItem("lightTheme") === "true") {
+  document.body.classList.add("light-theme");
+  themeToggle.textContent = "☾";
+  themeToggle.setAttribute("aria-pressed", "true");
+  themeToggle.setAttribute("aria-label", "Switch to dark mode");
+}
 
-const praiseMessages = [
-  "You're a still-life painting.",
-  "Motionless excellence!",
-  "Truly doing nothing… spectacularly.",
-  "Zero input. Infinite peace.",
-  "Still. Silent. Supreme.",
-  "Master of the art of nothingness.",
-  "Professional procrastinator level achieved.",
-  "Even sloths are impressed by your stillness.",
-  "Congratulations on your commitment to inactivity!",
-  "You've unlocked the secret of absolute stillness.",
-  "The universe applauds your dedication to doing nothing.",
-  "Zen masters everywhere are taking notes."
-];
-
-const disappointedMessages = [
-  "🤨 Hey... you moved.",
-  "😔 The magic is broken...",
-  "🙄 Really? You had to move?",
-  "😤 Your stillness streak is ruined!",
-  "🤦 So close to enlightenment...",
-  "💔 My heart breaks with your movement.",
-  "😱 MOVEMENT DETECTED! ALERT! ALERT!",
-  "🚨 The Department of Doing Nothing is disappointed.",
-  "😿 Even cats are better at staying still.",
-  "🌪️ You've disturbed the cosmic balance!",
-  "🙈 I can't watch... you moved again!",
-  "💸 There goes your stillness investment...",
-  "🎭 The performance is ruined!",
-  "⚡ Movement detected. Zen points deducted from the universe.",
-  "🎪 Ladies and gentlemen, we have a mover!"
-];
-
-function updateTimer() {
-  if (isIdle) {
-    seconds++;
-    afkTime++;
-    updateCatForStillness();
-    
-    // Zen points every 30 seconds
-    if (afkTime % 30 === 0) {
-      zenPoints++;
-      zenDisplay.textContent = `🧘 Zen Points: ${zenPoints}`;
-      zenDisplay.style.color = '#4ecdc4';
-    }
-
-    if (seconds === 60) {
-      seconds = 0;
-      minutes++;
-      confetti(); // burst every minute
-    }
-
-    timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-
-    // Show praise message only once every 30 seconds, keep it until next cycle
-    if (afkTime % 30 === 0 && !hasShownMessage) {
-      currentMessage = praiseMessages[Math.floor(Math.random() * praiseMessages.length)];
-      messageDisplay.textContent = currentMessage;
-      messageDisplay.style.color = '#ffa726';
-      hasShownMessage = true;
-    }
-
-    // Special milestone celebrations
-    if (afkTime === 120) { // 2 minutes
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-      currentMessage = "🎉 2 MINUTES OF PURE NOTHINGNESS! LEGENDARY!";
-      messageDisplay.textContent = currentMessage;
-      messageDisplay.style.color = '#ff6b6b';
-      celebrateCat("Two whole minutes? I’m impressed. A little.");
-    }
-
-    if (afkTime === 300) { // 5 minutes
-      confetti({
-        particleCount: 200,
-        spread: 100,
-        origin: { y: 0.6 },
-        colors: ['#ffd700', '#ff6b6b', '#4ecdc4', '#ab47bc']
-      });
-      currentMessage = "🏆 5 MINUTES! PROFESSIONAL STATUE STATUS ACHIEVED!";
-      messageDisplay.textContent = currentMessage;
-      messageDisplay.style.color = '#ffd700';
-      celebrateCat("Five minutes of stillness! I knew you had it in you.");
-    }
-
-    if (afkTime === 600) { // 10 minutes
-      confetti({
-        particleCount: 300,
-        spread: 180,
-        origin: { y: 0.3 },
-        colors: ['#ffd700', '#ff6b6b', '#4ecdc4', '#ab47bc', '#66bb6a']
-      });
-      currentMessage = "👑 10 MINUTES! BOW TO THE EMPEROR/EMPRESS OF IDLENESS!";
-      messageDisplay.textContent = currentMessage;
-      messageDisplay.style.color = '#ffd700';
-      messageDisplay.style.textShadow = '0 0 20px #ffd700';
-      celebrateCat("Ten minutes! You may continue your very serious nap.");
-    }
+chrome.runtime.sendMessage({ type: "getState" }, (response) => {
+  if (chrome.runtime.lastError) {
+    errorDisplay.textContent = "Could not load the timer. Try reopening the extension.";
+    errorDisplay.hidden = false;
+    return;
   }
-}
-
-setInterval(updateTimer, 1000);
-
-let timeout;
-
-function resetIdleTimer() {
-  isIdle = false;
-  statusDisplay.innerHTML = 'Status: <span style="color:red;">You moved</span>';
-  
-  // Show a unique disappointed message and keep it until idle starts again
-  const disappointedMessage = disappointedMessages[Math.floor(Math.random() * disappointedMessages.length)];
-  messageDisplay.textContent = disappointedMessage;
-  messageDisplay.style.color = '#ff6b6b';
-  messageDisplay.style.textShadow = 'none';
-  
-  afkTime = minutes = seconds = 0;
-  timerDisplay.textContent = '00:00';
-  hasShownMessage = false; // Reset flag so new message can show when idle starts
-
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    isIdle = true;
-    statusDisplay.innerHTML = 'Status: <span style="color:green;">Idle</span>';
-    messageDisplay.textContent = "✨ Welcome back to the art of doing nothing!";
-    messageDisplay.style.color = '#66bb6a';
-    hasShownMessage = false; // Reset for new cycle
-  }, 3000);
-}
-
-let isResetting = false;
-
-function handleUserActivity() {
-  reactToCatActivity(isIdle);
-
-  if (!isResetting) {
-    isResetting = true;
-    resetIdleTimer();
+  if (response?.error) {
+    errorDisplay.textContent = response.error;
+    errorDisplay.hidden = false;
+    return;
   }
+  timerState = response.state;
+  render();
+});
 
-  clearTimeout(timeout);
-  timeout = setTimeout(() => {
-    isIdle = true;
-    isResetting = false;
-    statusDisplay.innerHTML = 'Status: <span style="color:green;">Idle</span>';
-    messageDisplay.textContent = "✨ Welcome back to the art of doing nothing!";
-    messageDisplay.style.color = '#66bb6a';
-    hasShownMessage = false;
-    updateCatForStillness();
-  }, 500);
-}
-
-['mousemove', 'click', 'keydown', 'scroll', 'touchstart'].forEach(event =>
-  document.addEventListener(event, handleUserActivity)
-);
-
-// Initialize
-zenDisplay.textContent = "🧘 Zen Points: 0";
-messageDisplay.textContent = "💭 Begin your journey into the void of productivity...";
-messageDisplay.style.color = '#ab47bc';
+setInterval(() => {
+  render();
+  if (timerState?.status === "running" && getRemainingSeconds() === 0) {
+    refreshTimerState();
+  }
+}, 250);

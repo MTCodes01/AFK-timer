@@ -1,42 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
-  <title>AFK Timer | UselessHub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Focus Timer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-  <div class="container">
-    <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false">☀ Light mode</button>
-    <h1>AFK Timer</h1>
-    <p id="timer">00:00</p>
-    <p id="status">Status: <span style="color:green;">Idle</span></p>
-    <p id="message"></p>
-    <p id="zen-counter"></p>
-    <canvas id="confetti-canvas"></canvas>
-  </div>
-
-  <div class="cat-widget">
-    <section id="cat-companion" class="cat-companion" data-mood="idle" aria-label="Cat companion">
-      <div class="cat-character" aria-hidden="true">
-        <span class="cat-ear cat-ear-left"></span>
-        <span class="cat-ear cat-ear-right"></span>
-        <span class="cat-eye cat-eye-left"></span>
-        <span class="cat-eye cat-eye-right"></span>
-        <span class="cat-nose"></span>
-        <span class="cat-mouth"></span>
-        <span class="cat-whiskers cat-whiskers-left"></span>
-        <span class="cat-whiskers cat-whiskers-right"></span>
+  <main class="container">
+    <header class="header">
+      <div>
+        <p class="eyebrow">AFK TIMER</p>
+        <h1>Focus Timer</h1>
       </div>
-      <p id="cat-message" class="cat-message" aria-live="polite">I'm keeping an eye on your stillness.</p>
-    </section>
-    <button id="cat-toggle" class="cat-toggle" type="button" aria-controls="cat-companion" aria-pressed="false">Hide cat</button>
-  </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="false">☀</button>
+    </header>
 
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <section class="timer-card" aria-live="polite">
+      <p id="phase-label" class="phase-label">Ready to focus</p>
+      <p id="timer" class="timer" role="timer" aria-label="60 minutes remaining">60:00</p>
+      <div class="progress-track" aria-hidden="true">
+        <div id="progress" class="progress"></div>
+      </div>
+      <p id="status" class="status">60 min focus <span aria-hidden="true">·</span> 10 min break</p>
+    </section>
+
+    <p id="message" class="message" role="status">Make space for focused work.</p>
+
+    <div class="controls">
+      <button id="primary-control" class="primary-control" type="button">Start focus</button>
+      <button id="skip-control" class="skip-control" type="button" disabled>Skip phase <span aria-hidden="true">→</span></button>
+    </div>
+    <p id="error-message" class="error-message" role="alert" hidden></p>
+  </main>
   <script src="script.js"></script>
 </body>
-
 </html>
