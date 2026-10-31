@@ -1,36 +1,19 @@
-# AFK Timer 🎯
+# AFK Timer
 
-## Project Description
-The ultimate AFK (Away From Keyboard) timer that celebrates your commitment to doing absolutely nothing. It's a procrastination tool that rewards stillness and punishes productivity with zen points and philosophical enlightenment.
-
-### The Concept
-In today's hyper-productive world, people are constantly moving, clicking, typing, and being useful. There's a severe lack of appreciation for the ancient art of sitting perfectly still and accomplishing nothing. How do we measure and gamify our commitment to inactivity?
-
-Our revolutionary AFK Timer tracks your motionlessness with precision, awards zen points for stillness, delivers philosophical insights about doing nothing, and celebrates your achievements in the noble pursuit of absolutely zero productivity. 
+AFK Timer is a Chrome productivity extension with a 60-minute focus session followed by a 10-minute break. It automatically alternates between work and break sessions, even when its popup is closed, and sends a browser notification at each transition.
 
 ## Features
-- 🎯 **Precision Stillness Tracking**: Detects even the slightest mouse twitch, keystroke, or scroll.
-- 🧘 **Zen Point System**: Gamifies your commitment to inactivity. Earn points every 30 seconds.
-- 🎉 **Milestone Celebrations**: Epic confetti for achieving new levels of nothingness (at 2, 5, and 10 minutes).
-- 🐱 **Cat Companion**: Reacts to page activity, relaxes as you stay still, celebrates milestones, and can be hidden.
-- 💭 **Philosophical Insights**: Deep thoughts and praise messages about the art of doing nothing.
-- ✨ **Glassmorphism UI**: Premium design for premium procrastination.
-- 😤 **Shame System**: Disappointed messages when you dare to move and break your streak.
 
-## Technical Details
-- **Languages**: HTML5, CSS3, Vanilla JavaScript
-- **Libraries**: Canvas Confetti (for celebrating achievements)
-- **Design**: Modern CSS with Glassmorphism effects
+- Start, pause, resume, or skip the current phase.
+- Keep timer state across popup closures and browser restarts.
+- Receive notifications when work or break time begins.
+- Switch between dark and light themes.
 
-## Installation & Usage
-```bash
-# Clone the repository
-git clone https://github.com/MTCodes01/Team-Five-CEAL
+## Install in Chrome
 
-# Navigate to project directory
-cd Team-Five-CEAL
-```
+1. Open `chrome://extensions`.
+2. Enable **Developer mode**.
+3. Select **Load unpacked** and choose this project directory.
+4. Open the AFK Timer toolbar button to start a focus session.
 
-Simply open `index.html` in your favorite browser, let go of the mouse and keyboard, and begin your journey into the void of productivity!
-
-The cat companion responds to mouse movement, clicks, scrolling, touch, and keyboard input on the page. It never captures input, and its animations respect your system's reduced-motion preference. Use the **Hide cat** button to dismiss it.
+The extension uses Manifest V3, `chrome.alarms` for background scheduling, `chrome.storage.local` for timer state, and `chrome.notifications` for phase reminders. No external libraries or network access are required.
